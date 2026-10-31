@@ -4,14 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-title" content="Photo Sheets">
-<title>2×3 Photo Sheets</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
+<title>2×3 Photo Sheets</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
-html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-body{margin:0}
-/* Layout: one narrow phone column — pick photos, toggle options, scroll the finished 4×6 sheets */
+/* Layout: one narrow phone column — pick photos, toggle options, tap a photo to adjust it, save the 4×6 sheets */
 :root {
   --bg: #eef1ef;
   --card: #ffffff;
@@ -20,6 +18,7 @@ body{margin:0}
   --line: #d3dad7;
   --accent: #23705f;
   --accent-ink: #ffffff;
+  --scrim: rgba(12, 18, 16, .92);
   --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
   --body: "Atkinson Hyperlegible", -apple-system, system-ui, sans-serif;
 }
@@ -28,7 +27,9 @@ body{margin:0}
 :root[data-theme="dark"] {
   --bg: #121816; --card: #1c2422; --ink: #e8eeeb; --muted: #9aa8a3; --line: #2e3a37; --accent: #5cc0a6; --accent-ink: #0d1412; color-scheme: dark }
 
-body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.45; }
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.45; }
+[hidden] { display: none !important; }
 .wrap { max-width: 520px; margin: 0 auto; padding-block: 20px 48px;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
   display: flex; flex-direction: column; gap: 18px; }
@@ -40,7 +41,7 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 30px; line-height
 .pick.over { border-color: var(--accent); }
 .btn { appearance: none; border: 0; border-radius: 999px; font: 700 17px var(--body); cursor: pointer;
   padding: 14px 24px; background: var(--accent); color: var(--accent-ink); min-height: 50px; }
-.btn:focus-visible, input:focus-visible + .sw { outline: 3px solid var(--accent); outline-offset: 3px; }
+.btn:focus-visible, input:focus-visible + .sw, .tool:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 .btn.ghost { background: transparent; color: var(--accent); border: 2px solid var(--accent); padding: 10px 18px; font-size: 15px; min-height: 44px; }
 .hint { color: var(--muted); font-size: 14px; }
 
@@ -58,10 +59,11 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 30px; line-height
 .status b { font-family: var(--display); font-size: 20px; }
 .status span { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
 .tag { display: inline-block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; margin-left: 6px; vertical-align: middle; }
+.tip { margin: -8px 0 0; color: var(--muted); font-size: 14px; }
 
 .sheets { display: flex; flex-direction: column; gap: 22px; }
 .sheet { display: flex; flex-direction: column; gap: 10px; }
-.sheet img { width: 100%; max-width: 100%; aspect-ratio: 2 / 3; display: block; background: #fff; border-radius: 4px;
+.sheet img { width: 100%; max-width: 100%; aspect-ratio: 2 / 3; display: block; background: #fff; border-radius: 4px; cursor: pointer;
   box-shadow: 0 1px 2px rgba(0,0,0,.12), 0 8px 24px rgba(0,0,0,.10); -webkit-touch-callout: default; }
 .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 .row .n { font-weight: 700; }
@@ -70,6 +72,28 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 30px; line-height
 .howto { background: var(--card); border-radius: 18px; padding: 16px; }
 .howto h2 { font-family: var(--display); font-size: 18px; margin: 0 0 8px; }
 .howto ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+
+/* Editor */
+.editor { position: fixed; inset: 0; z-index: 20; background: var(--scrim); color: #fff;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  padding-top: max(16px, env(safe-area-inset-top, 0px)); padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.ed-top { width: 100%; max-width: 420px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.ed-top b { font-family: var(--display); font-size: 20px; }
+.ed-top .btn { min-height: 44px; padding: 10px 22px; font-size: 16px; }
+.textbtn { appearance: none; background: none; border: 0; color: #fff; font: 400 16px var(--body); padding: 10px 4px; cursor: pointer; }
+.stage { flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; }
+#edCanvas { display: block; height: 100%; max-height: 560px; max-width: 100%; aspect-ratio: 2 / 3; background: #fff;
+  touch-action: none; cursor: grab; border-radius: 3px; outline: 2px solid rgba(255,255,255,.8); }
+#edCanvas:active { cursor: grabbing; }
+.ed-hint { margin: 0; font-size: 14px; color: rgba(255,255,255,.75); text-align: center; }
+.zoom { width: 100%; max-width: 420px; display: flex; align-items: center; gap: 12px; }
+.zoom label { font-size: 14px; color: rgba(255,255,255,.75); }
+.zoom input { flex: 1; accent-color: #5cc0a6; min-width: 0; }
+.tools { width: 100%; max-width: 420px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.tool { appearance: none; border: 1px solid rgba(255,255,255,.3); background: rgba(255,255,255,.08); color: #fff;
+  border-radius: 14px; padding: 10px 6px; font: 700 14px var(--body); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 64px; }
+.tool svg { width: 24px; height: 24px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -102,6 +126,7 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 30px; line-height
     <b id="count">Example sheet <span class="tag">sample</span></b>
     <span id="meta"></span>
   </div>
+  <p class="tip">Tap any photo on a sheet to rotate, zoom or crop it.</p>
 
   <div class="sheets" id="sheets"></div>
 
@@ -115,15 +140,48 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 30px; line-height
   </section>
 </div>
 
+<div class="editor" id="editor" hidden role="dialog" aria-modal="true" aria-labelledby="edTitle">
+  <div class="ed-top">
+    <button class="textbtn" id="edCancel" type="button">Cancel</button>
+    <b id="edTitle">Adjust photo</b>
+    <button class="btn" id="edDone" type="button">Done</button>
+  </div>
+  <div class="stage"><canvas id="edCanvas" width="600" height="900" aria-label="Photo crop. Drag to move, pinch to zoom."></canvas></div>
+  <p class="ed-hint">Drag to move. Pinch or use the slider to zoom.</p>
+  <div class="zoom">
+    <label for="zoomRange">Zoom</label>
+    <input type="range" id="zoomRange" min="1" max="5" step="0.01" value="1">
+  </div>
+  <div class="tools">
+    <button class="tool" id="rotL" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v6h6"/></svg>
+      Rotate left
+    </button>
+    <button class="tool" id="rotR" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
+      Rotate right
+    </button>
+    <button class="tool" id="edReset" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="1"/><path d="M9 12h6"/></svg>
+      Reset
+    </button>
+  </div>
+</div>
+
 <script>
 const DPI = 300, SW = 4 * DPI, SH = 6 * DPI, PW = 2 * DPI, PH = 3 * DPI;
 const $ = id => document.getElementById(id);
-let images = [];     // loaded HTMLImageElements
+let photos = [];      // { img, rot, zoom, ox, oy }  ox/oy = offset as a fraction of the frame
 let isSample = true;
 let urls = [];
 
+function newPhoto(img) {
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  return { img, rot: w > h ? 1 : 0, zoom: 1, ox: 0, oy: 0 };
+}
+
 // Example photos so the first screen shows a real sheet
-function sampleImages() {
+function samplePhotos() {
   const hues = [[200, 160], [28, 350], [140, 90], [260, 300]];
   return hues.map(([a, b], i) => {
     const c = document.createElement("canvas"); c.width = 400; c.height = 600;
@@ -133,7 +191,7 @@ function sampleImages() {
     x.fillStyle = g; x.fillRect(0, 0, 400, 600);
     x.fillStyle = "rgba(255,255,255,.85)"; x.beginPath(); x.arc(200, 250, 90, 0, 7); x.fill();
     x.font = "700 44px sans-serif"; x.textAlign = "center"; x.fillText("Photo " + (i + 1), 200, 470);
-    return c;
+    return newPhoto(c);
   });
 }
 
@@ -146,39 +204,57 @@ function loadFile(f) {
   });
 }
 
-// draw img cropped to fill w×h; turn landscape shots upright
-function drawFit(ctx, img, dx, dy, w, h) {
-  let iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+// Size of the photo inside a w×h frame, and how far it can move before showing white edges
+function geom(p, w, h) {
+  const iw = p.img.naturalWidth || p.img.width, ih = p.img.naturalHeight || p.img.height;
+  const odd = p.rot % 2 === 1;
+  const rw = odd ? ih : iw, rh = odd ? iw : ih;
+  const s = Math.max(w / rw, h / rh) * p.zoom;
+  return { iw, ih, s, mx: (rw * s - w) / 2 / w, my: (rh * s - h) / 2 / h };
+}
+function clampPhoto(p) {
+  const g = geom(p, 2, 3);
+  p.ox = Math.max(-g.mx, Math.min(g.mx, p.ox));
+  p.oy = Math.max(-g.my, Math.min(g.my, p.oy));
+}
+function drawPhoto(ctx, p, dx, dy, w, h) {
+  const g = geom(p, w, h);
   ctx.save();
   ctx.beginPath(); ctx.rect(dx, dy, w, h); ctx.clip();
-  if (iw > ih) { ctx.translate(dx + w, dy); ctx.rotate(Math.PI / 2); [w, h] = [h, w]; dx = 0; dy = 0; }
-  else { ctx.translate(dx, dy); dx = 0; dy = 0; }
-  const s = Math.max(w / iw, h / ih), sw = iw * s, sh = ih * s;
-  ctx.drawImage(img, (w - sw) / 2, (h - sh) / 2, sw, sh);
+  ctx.translate(dx + w / 2 + p.ox * w, dy + h / 2 + p.oy * h);
+  ctx.rotate(p.rot * Math.PI / 2);
+  ctx.drawImage(p.img, -g.iw * g.s / 2, -g.ih * g.s / 2, g.iw * g.s, g.ih * g.s);
   ctx.restore();
 }
 
+const POS = [[0, 0], [PW, 0], [0, PH], [PW, PH]];
+let layout = [];   // per sheet: array of photo indexes in each slot
+
 function render() {
   urls.forEach(u => URL.revokeObjectURL(u)); urls = [];
-  const src = images.length ? images : sampleImages();
   const repeat = $("repeat").checked, lines = $("lines").checked;
-  const groups = [];
-  if (repeat) src.forEach(im => groups.push([im, im, im, im]));
-  else for (let i = 0; i < src.length; i += 4) groups.push(src.slice(i, i + 4));
+  layout = [];
+  if (repeat) photos.forEach((_, i) => layout.push([i, i, i, i]));
+  else for (let i = 0; i < photos.length; i += 4) layout.push([...Array(Math.min(4, photos.length - i)).keys()].map(k => i + k));
 
   const box = $("sheets"); box.textContent = "";
-  const pos = [[0, 0], [PW, 0], [0, PH], [PW, PH]];
-  groups.forEach((g, n) => {
+  layout.forEach((slots, n) => {
     const c = document.createElement("canvas"); c.width = SW; c.height = SH;
     const x = c.getContext("2d");
     x.fillStyle = "#fff"; x.fillRect(0, 0, SW, SH);
-    g.forEach((im, k) => drawFit(x, im, pos[k][0], pos[k][1], PW, PH));
+    slots.forEach((pi, k) => drawPhoto(x, photos[pi], POS[k][0], POS[k][1], PW, PH));
     if (lines) {
       x.strokeStyle = "rgba(0,0,0,.55)"; x.lineWidth = 2;
       x.beginPath(); x.moveTo(PW, 0); x.lineTo(PW, SH); x.moveTo(0, PH); x.lineTo(SW, PH); x.stroke();
     }
     const wrap = document.createElement("div"); wrap.className = "sheet";
-    const img = document.createElement("img"); img.alt = "4×6 sheet " + (n + 1);
+    const img = document.createElement("img"); img.alt = "4×6 sheet " + (n + 1) + ". Tap a photo to adjust it.";
+    img.addEventListener("click", e => {
+      const r = img.getBoundingClientRect();
+      const col = e.clientX - r.left < r.width / 2 ? 0 : 1, row = e.clientY - r.top < r.height / 2 ? 0 : 1;
+      const pi = slots[row * 2 + col];
+      if (pi !== undefined) openEditor(pi);
+    });
     const row = document.createElement("div"); row.className = "row";
     const label = document.createElement("span"); label.className = "n"; label.textContent = "Sheet " + (n + 1);
     const btn = document.createElement("button"); btn.className = "btn ghost"; btn.type = "button"; btn.textContent = "Save";
@@ -193,12 +269,9 @@ function render() {
         const name = `photo-sheet-${n + 1}.jpg`;
         const file = new File([b], name, { type: "image/jpeg" });
         try {
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file] });
-            return;
-          }
+          if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file] }); return; }
           const a = document.createElement("a");
-          a.href = img.src; a.download = name; document.body.append(a); a.click(); a.remove();
+          a.href = u; a.download = name; document.body.append(a); a.click(); a.remove();
         } catch (e) {
           if (e && e.name === "AbortError") return;
           msg.textContent = "Couldn't save. Press and hold the sheet and choose Save to Photos.";
@@ -209,8 +282,8 @@ function render() {
 
   $("count").innerHTML = isSample
     ? 'Example sheet <span class="tag">sample</span>'
-    : `${groups.length} sheet${groups.length === 1 ? "" : "s"}`;
-  $("meta").textContent = isSample ? "" : `${images.length} photo${images.length === 1 ? "" : "s"}`;
+    : `${layout.length} sheet${layout.length === 1 ? "" : "s"}`;
+  $("meta").textContent = isSample ? "" : `${photos.length} photo${photos.length === 1 ? "" : "s"}`;
 }
 
 async function addFiles(list) {
@@ -219,10 +292,70 @@ async function addFiles(list) {
   $("count").textContent = "Loading…";
   const loaded = (await Promise.all(files.map(loadFile))).filter(Boolean);
   if (!loaded.length) { $("count").textContent = "Those files couldn't be opened. Try JPEG or PNG."; return; }
-  images = loaded; isSample = false;
+  photos = loaded.map(newPhoto); isSample = false;
   render();
 }
 
+/* ---------- Editor ---------- */
+const ed = $("editor"), cv = $("edCanvas"), cx = cv.getContext("2d"), zr = $("zoomRange");
+let editIndex = -1, draft = null, saved = null;
+
+function drawEditor() {
+  cx.fillStyle = "#fff"; cx.fillRect(0, 0, cv.width, cv.height);
+  drawPhoto(cx, draft, 0, 0, cv.width, cv.height);
+  zr.value = draft.zoom;
+}
+function openEditor(i) {
+  editIndex = i; draft = photos[i];
+  saved = { rot: draft.rot, zoom: draft.zoom, ox: draft.ox, oy: draft.oy };
+  ed.hidden = false; document.body.style.overflow = "hidden";
+  drawEditor(); $("edDone").focus();
+}
+function closeEditor(keep) {
+  if (!keep) Object.assign(draft, saved);
+  ed.hidden = true; document.body.style.overflow = "";
+  editIndex = -1;
+  if (keep) render();
+}
+function setZoom(z) { draft.zoom = Math.max(1, Math.min(5, z)); clampPhoto(draft); drawEditor(); }
+
+$("edDone").onclick = () => closeEditor(true);
+$("edCancel").onclick = () => closeEditor(false);
+$("rotL").onclick = () => { draft.rot = (draft.rot + 3) % 4; draft.ox = draft.oy = 0; clampPhoto(draft); drawEditor(); };
+$("rotR").onclick = () => { draft.rot = (draft.rot + 1) % 4; draft.ox = draft.oy = 0; clampPhoto(draft); drawEditor(); };
+$("edReset").onclick = () => { const p = newPhoto(draft.img); Object.assign(draft, { rot: p.rot, zoom: 1, ox: 0, oy: 0 }); drawEditor(); };
+zr.oninput = () => setZoom(+zr.value);
+document.addEventListener("keydown", e => { if (!ed.hidden && e.key === "Escape") closeEditor(false); });
+
+// Drag to move, pinch to zoom
+const pts = new Map();
+let pinchStart = 0, zoomStart = 1;
+cv.addEventListener("pointerdown", e => {
+  cv.setPointerCapture(e.pointerId);
+  pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pts.size === 2) { const [a, b] = [...pts.values()]; pinchStart = Math.hypot(a.x - b.x, a.y - b.y); zoomStart = draft.zoom; }
+});
+cv.addEventListener("pointermove", e => {
+  if (!pts.has(e.pointerId)) return;
+  const prev = pts.get(e.pointerId), now = { x: e.clientX, y: e.clientY };
+  pts.set(e.pointerId, now);
+  if (pts.size === 1) {
+    draft.ox += (now.x - prev.x) / cv.clientWidth;
+    draft.oy += (now.y - prev.y) / cv.clientHeight;
+    clampPhoto(draft); drawEditor();
+  } else if (pts.size === 2 && pinchStart) {
+    const [a, b] = [...pts.values()];
+    setZoom(zoomStart * Math.hypot(a.x - b.x, a.y - b.y) / pinchStart);
+  }
+});
+const endPt = e => { pts.delete(e.pointerId); if (pts.size < 2) pinchStart = 0; };
+cv.addEventListener("pointerup", endPt);
+cv.addEventListener("pointercancel", endPt);
+cv.addEventListener("wheel", e => { e.preventDefault(); setZoom(draft.zoom * Math.exp(-e.deltaY / 400)); }, { passive: false });
+// stop Safari's page pinch-zoom while editing
+["gesturestart", "gesturechange"].forEach(t => cv.addEventListener(t, e => e.preventDefault()));
+
+/* ---------- Picking photos ---------- */
 $("pickBtn").onclick = () => $("file").click();
 $("file").onchange = e => { addFiles(e.target.files); e.target.value = ""; };
 $("repeat").onchange = render;
@@ -230,12 +363,11 @@ $("lines").onchange = render;
 const drop = $("drop");
 ["dragenter", "dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
 ["dragleave", "drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
-drop.addEventListener("drop", e => addFiles(e.dataTransfer.files));
 document.addEventListener("dragover", e => e.preventDefault());
 document.addEventListener("drop", e => { e.preventDefault(); if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
 
+photos = samplePhotos();
 render();
 </script>
-
 </body>
 </html>
