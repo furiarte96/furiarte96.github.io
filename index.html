@@ -195,13 +195,38 @@ function samplePhotos() {
   });
 }
 
-function loadFile(f) {
+function loadImg(blob) {
   return new Promise(res => {
-    const u = URL.createObjectURL(f), im = new Image();
+    const u = URL.createObjectURL(blob), im = new Image();
     im.onload = () => res(im);
     im.onerror = () => { URL.revokeObjectURL(u); res(null); };
     im.src = u;
   });
+}
+
+// HEIC converter, loaded only when a browser can't open iPhone photos itself
+let heicLib = null;
+function getHeic() {
+  if (!heicLib) heicLib = new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
+    s.onload = () => res(window.heic2any);
+    s.onerror = () => { heicLib = null; rej(new Error("converter")); };
+    document.head.append(s);
+  });
+  return heicLib;
+}
+const isHeic = f => /hei[cf]/i.test(f.type) || /\.hei[cf]$/i.test(f.name);
+
+async function loadFile(f) {
+  const im = await loadImg(f);
+  if (im) return im;
+  if (!isHeic(f)) return null;
+  try {
+    $("count").textContent = "Converting iPhone photos…";
+    const conv = await (await getHeic())({ blob: f, toType: "image/jpeg", quality: 0.92 });
+    return await loadImg(Array.isArray(conv) ? conv[0] : conv);
+  } catch { return null; }
 }
 
 // Size of the photo inside a w×h frame, and how far it can move before showing white edges
@@ -291,7 +316,7 @@ async function addFiles(list) {
   if (!files.length) return;
   $("count").textContent = "Loading…";
   const loaded = (await Promise.all(files.map(loadFile))).filter(Boolean);
-  if (!loaded.length) { $("count").textContent = "Those files couldn't be opened. Try JPEG or PNG."; return; }
+  if (!loaded.length) { $("count").textContent = "Those photos couldn't be opened. Check your internet connection and try again, or try JPEG or PNG photos."; return; }
   photos = loaded.map(newPhoto); isSample = false;
   render();
 }
