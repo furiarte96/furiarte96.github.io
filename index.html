@@ -343,6 +343,14 @@ function render() {
   $("meta").textContent = isSample ? "" : `${photos.length} photo${photos.length === 1 ? "" : "s"}`;
 }
 
+// Example: exactly one sheet's worth of sample photos for the chosen size
+let samples = null;
+function showSample() {
+  samples = samples || samplePhotos();
+  const per = L().cols * L().rows;
+  photos = samples.slice(0, per);
+}
+
 async function addFiles(list) {
   const files = [...list].filter(f => f.type.startsWith("image/") || /\.(heic|heif|jpe?g|png|webp)$/i.test(f.name));
   if (!files.length) return;
@@ -419,7 +427,7 @@ cv.addEventListener("wheel", e => { e.preventDefault(); setZoom(draft.zoom * Mat
 $("pickBtn").onclick = () => $("file").click();
 $("file").onchange = e => { addFiles(e.target.files); e.target.value = ""; };
 $("repeat").onchange = render;
-document.querySelectorAll('input[name="size"]').forEach(r => r.onchange = () => { size = r.value; render(); });
+document.querySelectorAll('input[name="size"]').forEach(r => r.onchange = () => { size = r.value; if (isSample) showSample(); render(); });
 try { const saved = localStorage.getItem("photoSize"); if (SIZES[saved]) { size = saved; document.querySelector(`input[value="${saved}"]`).checked = true; } } catch {}
 document.querySelectorAll('input[name="size"]').forEach(r => r.addEventListener("change", () => { try { localStorage.setItem("photoSize", size); } catch {} }));
 $("lines").onchange = render;
@@ -429,7 +437,7 @@ const drop = $("drop");
 document.addEventListener("dragover", e => e.preventDefault());
 document.addEventListener("drop", e => { e.preventDefault(); if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
 
-photos = samplePhotos();
+showSample();
 render();
 </script>
 </body>
