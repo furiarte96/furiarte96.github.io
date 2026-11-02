@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-title" content="Photo Sheets">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>2×3 Photo Sheets</title>
+<title>4×6 Photo Sheets</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
@@ -55,6 +55,14 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 30px; line-height
 .opt input:checked + .sw { background: var(--accent); }
 .opt input:checked + .sw::after { transform: translateX(20px); }
 
+.sizes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--card); border-radius: 18px; padding: 4px; }
+.sizes input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.sizes label { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; border-radius: 14px; cursor: pointer; text-align: center; }
+.sizes label b { font-family: var(--display); font-size: 20px; font-variant-numeric: tabular-nums; }
+.sizes label small { color: var(--muted); font-size: 12px; }
+.sizes input:checked + label { background: var(--accent); color: var(--accent-ink); }
+.sizes input:checked + label small { color: var(--accent-ink); }
+.sizes input:focus-visible + label { outline: 3px solid var(--accent); outline-offset: 2px; }
 .status { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
 .status b { font-family: var(--display); font-size: 20px; }
 .status span { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
@@ -83,7 +91,7 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 30px; line-height
 .ed-top .btn { min-height: 44px; padding: 10px 22px; font-size: 16px; }
 .textbtn { appearance: none; background: none; border: 0; color: #fff; font: 400 16px var(--body); padding: 10px 4px; cursor: pointer; }
 .stage { flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; }
-#edCanvas { display: block; height: 100%; max-height: 560px; max-width: 100%; aspect-ratio: 2 / 3; background: #fff;
+#edCanvas { display: block; width: auto; height: auto; max-height: min(100%, 560px); max-width: 100%; background: #fff;
   touch-action: none; cursor: grab; border-radius: 3px; outline: 2px solid rgba(255,255,255,.8); }
 #edCanvas:active { cursor: grabbing; }
 .ed-hint { margin: 0; font-size: 14px; color: rgba(255,255,255,.75); text-align: center; }
@@ -101,8 +109,8 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 30px; line-height
 
 <div class="wrap">
   <header>
-    <h1>2×3 Photo Sheets</h1>
-    <p class="sub">Pick photos. Each 4×6 print holds four 2×3 photos.</p>
+    <h1>4×6 Photo Sheets</h1>
+    <p class="sub">Pick a size and your photos. Every sheet prints on 4×6 paper.</p>
   </header>
 
   <div class="pick" id="drop">
@@ -111,9 +119,16 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 30px; line-height
     <input id="file" type="file" accept="image/*" multiple hidden>
   </div>
 
+  <fieldset class="sizes" id="sizes" style="border:0;margin:0;min-width:0">
+    <legend hidden>Photo size</legend>
+    <input type="radio" name="size" id="s23" value="2x3" checked><label for="s23"><b>2×3</b><small>4 per sheet</small></label>
+    <input type="radio" name="size" id="s22" value="2x2"><label for="s22"><b>2×2</b><small>6 per sheet</small></label>
+    <input type="radio" name="size" id="s46" value="4x6"><label for="s46"><b>4×6</b><small>1 per sheet</small></label>
+  </fieldset>
+
   <div class="opts">
-    <label class="opt" for="repeat">
-      <span>Same photo ×4<small>Wallet-size copies of each photo</small></span>
+    <label class="opt" for="repeat" id="repeatRow">
+      <span id="repeatText">Same photo ×4<small>Fill a sheet with copies of each photo</small></span>
       <input type="checkbox" id="repeat"><span class="sw"></span>
     </label>
     <label class="opt" for="lines">
@@ -135,7 +150,7 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 30px; line-height
     <ol>
       <li>Tap <b>Save</b> under a sheet, then <b>Save Image</b>. Or press and hold the sheet and choose <b>Save to Photos</b>.</li>
       <li>Open it in Photos and tap Share, then Print.</li>
-      <li>Pick 4×6 paper. Turn off any "fit" or "fill" scaling so each photo comes out exactly 2×3 inches.</li>
+      <li>Pick 4×6 paper. Turn off any "fit" or "fill" scaling so each photo comes out at the exact size you picked.</li>
     </ol>
   </section>
 </div>
@@ -169,20 +184,31 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 30px; line-height
 </div>
 
 <script>
-const DPI = 300, SW = 4 * DPI, SH = 6 * DPI, PW = 2 * DPI, PH = 3 * DPI;
+const DPI = 300, SW = 4 * DPI, SH = 6 * DPI;
+// Every layout fills a 4×6 portrait sheet exactly
+const SIZES = {
+  "2x3": { cols: 2, rows: 2, w: 2, h: 3 },
+  "2x2": { cols: 2, rows: 3, w: 2, h: 2 },
+  "4x6": { cols: 1, rows: 1, w: 4, h: 6 },
+};
 const $ = id => document.getElementById(id);
-let photos = [];      // { img, rot, zoom, ox, oy }  ox/oy = offset as a fraction of the frame
+let size = "2x3";
+let photos = [];      // { img, e: { [size]: { rot, zoom, ox, oy } } }  ox/oy = offset as a fraction of the frame
 let isSample = true;
 let urls = [];
 
-function newPhoto(img) {
+const L = () => SIZES[size];
+function newPhoto(img) { return { img, e: {} }; }
+function defaultEdit(img) {
   const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
-  return { img, rot: w > h ? 1 : 0, zoom: 1, ox: 0, oy: 0 };
+  const portraitSlot = L().h > L().w;
+  return { rot: portraitSlot && w > h ? 1 : 0, zoom: 1, ox: 0, oy: 0 };
 }
+function edit(p) { return p.e[size] || (p.e[size] = defaultEdit(p.img)); }
 
 // Example photos so the first screen shows a real sheet
 function samplePhotos() {
-  const hues = [[200, 160], [28, 350], [140, 90], [260, 300]];
+  const hues = [[200, 160], [28, 350], [140, 90], [260, 300], [50, 20], [180, 220]];
   return hues.map(([a, b], i) => {
     const c = document.createElement("canvas"); c.width = 400; c.height = 600;
     const x = c.getContext("2d");
@@ -230,54 +256,60 @@ async function loadFile(f) {
 }
 
 // Size of the photo inside a w×h frame, and how far it can move before showing white edges
-function geom(p, w, h) {
-  const iw = p.img.naturalWidth || p.img.width, ih = p.img.naturalHeight || p.img.height;
+function geom(img, p, w, h) {
+  const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
   const odd = p.rot % 2 === 1;
   const rw = odd ? ih : iw, rh = odd ? iw : ih;
   const s = Math.max(w / rw, h / rh) * p.zoom;
   return { iw, ih, s, mx: (rw * s - w) / 2 / w, my: (rh * s - h) / 2 / h };
 }
-function clampPhoto(p) {
-  const g = geom(p, 2, 3);
+function clampPhoto(img, p) {
+  const g = geom(img, p, L().w, L().h);
   p.ox = Math.max(-g.mx, Math.min(g.mx, p.ox));
   p.oy = Math.max(-g.my, Math.min(g.my, p.oy));
 }
-function drawPhoto(ctx, p, dx, dy, w, h) {
-  const g = geom(p, w, h);
+function drawPhoto(ctx, img, p, dx, dy, w, h) {
+  const g = geom(img, p, w, h);
   ctx.save();
   ctx.beginPath(); ctx.rect(dx, dy, w, h); ctx.clip();
   ctx.translate(dx + w / 2 + p.ox * w, dy + h / 2 + p.oy * h);
   ctx.rotate(p.rot * Math.PI / 2);
-  ctx.drawImage(p.img, -g.iw * g.s / 2, -g.ih * g.s / 2, g.iw * g.s, g.ih * g.s);
+  ctx.drawImage(img, -g.iw * g.s / 2, -g.ih * g.s / 2, g.iw * g.s, g.ih * g.s);
   ctx.restore();
 }
 
-const POS = [[0, 0], [PW, 0], [0, PH], [PW, PH]];
 let layout = [];   // per sheet: array of photo indexes in each slot
 
 function render() {
   urls.forEach(u => URL.revokeObjectURL(u)); urls = [];
-  const repeat = $("repeat").checked, lines = $("lines").checked;
+  const { cols, rows } = L(), per = cols * rows, PW = SW / cols, PH = SH / rows;
+  const repeat = per > 1 && $("repeat").checked, lines = per > 1 && $("lines").checked;
+  $("repeatRow").hidden = $("lines").closest(".opt").hidden = per === 1;
+  $("repeatText").firstChild.textContent = `Same photo ×${per}`;
   layout = [];
-  if (repeat) photos.forEach((_, i) => layout.push([i, i, i, i]));
-  else for (let i = 0; i < photos.length; i += 4) layout.push([...Array(Math.min(4, photos.length - i)).keys()].map(k => i + k));
+  if (repeat) photos.forEach((_, i) => layout.push(Array(per).fill(i)));
+  else for (let i = 0; i < photos.length; i += per) layout.push([...Array(Math.min(per, photos.length - i)).keys()].map(k => i + k));
 
   const box = $("sheets"); box.textContent = "";
   layout.forEach((slots, n) => {
     const c = document.createElement("canvas"); c.width = SW; c.height = SH;
     const x = c.getContext("2d");
     x.fillStyle = "#fff"; x.fillRect(0, 0, SW, SH);
-    slots.forEach((pi, k) => drawPhoto(x, photos[pi], POS[k][0], POS[k][1], PW, PH));
+    slots.forEach((pi, k) => drawPhoto(x, photos[pi].img, edit(photos[pi]), (k % cols) * PW, Math.floor(k / cols) * PH, PW, PH));
     if (lines) {
       x.strokeStyle = "rgba(0,0,0,.55)"; x.lineWidth = 2;
-      x.beginPath(); x.moveTo(PW, 0); x.lineTo(PW, SH); x.moveTo(0, PH); x.lineTo(SW, PH); x.stroke();
+      x.beginPath();
+      for (let c2 = 1; c2 < cols; c2++) { x.moveTo(c2 * PW, 0); x.lineTo(c2 * PW, SH); }
+      for (let r2 = 1; r2 < rows; r2++) { x.moveTo(0, r2 * PH); x.lineTo(SW, r2 * PH); }
+      x.stroke();
     }
     const wrap = document.createElement("div"); wrap.className = "sheet";
     const img = document.createElement("img"); img.alt = "4×6 sheet " + (n + 1) + ". Tap a photo to adjust it.";
     img.addEventListener("click", e => {
       const r = img.getBoundingClientRect();
-      const col = e.clientX - r.left < r.width / 2 ? 0 : 1, row = e.clientY - r.top < r.height / 2 ? 0 : 1;
-      const pi = slots[row * 2 + col];
+      const col = Math.min(cols - 1, Math.floor((e.clientX - r.left) / (r.width / cols)));
+      const row = Math.min(rows - 1, Math.floor((e.clientY - r.top) / (r.height / rows)));
+      const pi = slots[row * cols + col];
       if (pi !== undefined) openEditor(pi);
     });
     const row = document.createElement("div"); row.className = "row";
@@ -291,7 +323,7 @@ function render() {
       const u = URL.createObjectURL(b); urls.push(u); img.src = u;
       btn.onclick = async () => {
         msg.textContent = "";
-        const name = `photo-sheet-${n + 1}.jpg`;
+        const name = `photos-${size}-sheet-${n + 1}.jpg`;
         const file = new File([b], name, { type: "image/jpeg" });
         try {
           if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file] }); return; }
@@ -323,15 +355,18 @@ async function addFiles(list) {
 
 /* ---------- Editor ---------- */
 const ed = $("editor"), cv = $("edCanvas"), cx = cv.getContext("2d"), zr = $("zoomRange");
-let editIndex = -1, draft = null, saved = null;
+let editIndex = -1, draft = null, draftImg = null, saved = null;
 
 function drawEditor() {
   cx.fillStyle = "#fff"; cx.fillRect(0, 0, cv.width, cv.height);
-  drawPhoto(cx, draft, 0, 0, cv.width, cv.height);
+  drawPhoto(cx, draftImg, draft, 0, 0, cv.width, cv.height);
   zr.value = draft.zoom;
 }
 function openEditor(i) {
-  editIndex = i; draft = photos[i];
+  editIndex = i; draftImg = photos[i].img; draft = edit(photos[i]);
+  cv.width = 600; cv.height = Math.round(600 * L().h / L().w);
+  cv.style.setProperty("--ratio", `${L().w} / ${L().h}`);
+  $("edTitle").textContent = `Adjust ${size.replace("x", "×")} photo`;
   saved = { rot: draft.rot, zoom: draft.zoom, ox: draft.ox, oy: draft.oy };
   ed.hidden = false; document.body.style.overflow = "hidden";
   drawEditor(); $("edDone").focus();
@@ -342,13 +377,13 @@ function closeEditor(keep) {
   editIndex = -1;
   if (keep) render();
 }
-function setZoom(z) { draft.zoom = Math.max(1, Math.min(5, z)); clampPhoto(draft); drawEditor(); }
+function setZoom(z) { draft.zoom = Math.max(1, Math.min(5, z)); clampPhoto(draftImg, draft); drawEditor(); }
 
 $("edDone").onclick = () => closeEditor(true);
 $("edCancel").onclick = () => closeEditor(false);
-$("rotL").onclick = () => { draft.rot = (draft.rot + 3) % 4; draft.ox = draft.oy = 0; clampPhoto(draft); drawEditor(); };
-$("rotR").onclick = () => { draft.rot = (draft.rot + 1) % 4; draft.ox = draft.oy = 0; clampPhoto(draft); drawEditor(); };
-$("edReset").onclick = () => { const p = newPhoto(draft.img); Object.assign(draft, { rot: p.rot, zoom: 1, ox: 0, oy: 0 }); drawEditor(); };
+$("rotL").onclick = () => { draft.rot = (draft.rot + 3) % 4; draft.ox = draft.oy = 0; clampPhoto(draftImg, draft); drawEditor(); };
+$("rotR").onclick = () => { draft.rot = (draft.rot + 1) % 4; draft.ox = draft.oy = 0; clampPhoto(draftImg, draft); drawEditor(); };
+$("edReset").onclick = () => { Object.assign(draft, defaultEdit(draftImg)); drawEditor(); };
 zr.oninput = () => setZoom(+zr.value);
 document.addEventListener("keydown", e => { if (!ed.hidden && e.key === "Escape") closeEditor(false); });
 
@@ -367,7 +402,7 @@ cv.addEventListener("pointermove", e => {
   if (pts.size === 1) {
     draft.ox += (now.x - prev.x) / cv.clientWidth;
     draft.oy += (now.y - prev.y) / cv.clientHeight;
-    clampPhoto(draft); drawEditor();
+    clampPhoto(draftImg, draft); drawEditor();
   } else if (pts.size === 2 && pinchStart) {
     const [a, b] = [...pts.values()];
     setZoom(zoomStart * Math.hypot(a.x - b.x, a.y - b.y) / pinchStart);
@@ -384,6 +419,9 @@ cv.addEventListener("wheel", e => { e.preventDefault(); setZoom(draft.zoom * Mat
 $("pickBtn").onclick = () => $("file").click();
 $("file").onchange = e => { addFiles(e.target.files); e.target.value = ""; };
 $("repeat").onchange = render;
+document.querySelectorAll('input[name="size"]').forEach(r => r.onchange = () => { size = r.value; render(); });
+try { const saved = localStorage.getItem("photoSize"); if (SIZES[saved]) { size = saved; document.querySelector(`input[value="${saved}"]`).checked = true; } } catch {}
+document.querySelectorAll('input[name="size"]').forEach(r => r.addEventListener("change", () => { try { localStorage.setItem("photoSize", size); } catch {} }));
 $("lines").onchange = render;
 const drop = $("drop");
 ["dragenter", "dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
